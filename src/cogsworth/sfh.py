@@ -2003,6 +2003,82 @@ class CarinaDwarf(SpheroidalDwarf):
                          alpha=0.946, eta=0.5, **kwargs)
 
 
+class CellSFH(StarFormationHistory):
+    """Observationally derived SFH which is measured in discrete Ra, Dec cells, and for each of the metallicity ranges provided,
+       has a value for an SFR in discrete temporal bins. This is the format of most measured SFHs from local group galaxies, e.g.
+       Harris and Zaritsky LMC and SMC, PHAT + PHATTER M31 + M33. The goal is for each of those 4 SFHs to inherit CellSFH, and load
+       in the proper data for an individual SFH from a pkl file or something else compact.
+    
+       Notes + Assumptions as I try to write this:
+       - for now, assumes the galactic plane is perfectly perpendicular to line of sight (i=0)
+       - Sets the midpoint of the cell array to galactrocentric radius of 0
+       - Assumes that every galactic z coordinate is sampled uniformly within z_max
+       - Probably will assume that everything gets sampled with 0 velocity
+    """
+
+    def __init__(self, sfh_map, metallicity_bins, temporal_bins, cell_edges, distance, inclination=0, z_max=2*u.kpc, **kwargs):
+        """A Cell-based SFH which can implement maps like Harris and Zaritsky LMC/SMC.
+
+        Parameters
+        ----------
+        sfh_map : `np.ndarray`
+            An array with dimensions: M x T x N. Where M = len(metallicity_bins) and T = len(temporal_bins). For a given
+            metallicity and time bin, there is an array of N = len(cell_edges) values of SFR in units of Msun/yr, where the
+            order of the values does not matter, as long as it properly corresponds to the angular cell coordinates in cell_edges.
+
+        metallicity_bins : `np.array`
+            An array with len(metallicity_bins)=len(sfh_map), where each element is a tuple of metallcity range.
+
+        temporal_bins : `np.array`
+            An array with len(temporal_bins)=len(sfh_map), where each element is a tuple of time range.
+
+        cell_edges : `np.array`
+            An array with len(cell_edges)=len(sfh_map[0,0]), where each element is v tuples of (ra,dec) giving
+            the edges of the cell, provided in counterclockwise order, where v>=3.
+
+        distance : :class:`~astropy.units.Quantity` [length]
+            Distance to the midpoint of the galaxy.
+
+        inclination : `float`
+            The inclination of the galaxy. Only i=0 is implemented, any other value throws an expection.
+
+        z_max : :class:`~astropy.units.Quantity` [length]
+            Maximum height of the "disk" over which point are uniformly sampled (each cell will be some prism)
+        """
+        
+        assert sfh_map.shape[0] == metallicity_bins.shape[0], "Metallicity bin shape does not match sfh_map"
+        assert sfh_map.shape[1] == temporal_bins.shape[0], "Temporal bin shape does not match sfh_map"
+        assert sfh_map.shape[2] == cell_edges.shape[0], "Cell edge bin shape does not match sfh_map"
+
+        if inclination > 0: raise NotImplemented("i > 0 not yet implemented")
+
+        self._distance = distance
+        self._sfh_map = sfh_map
+        self._metallicity_bins = metallicity_bins
+        self._temporal_bins = temporal_bins
+        self._cell_edges = cell_edges
+        self._distance = distance
+        self._inclination = inclination
+        self._z_max = z_max
+
+        super().__init__(**kwargs)
+
+        def draw_lookback_times(self, size):
+                raise NotImplementedError("TBD")
+        
+        def draw_radii(self, size):
+            raise NotImplementedError("TBD")
+    
+        def draw_heights(self, size):
+            raise NotImplementedError("TBD")
+    
+        def draw_phi(self, size):
+            raise NotImplementedError("TBD")
+    
+        def get_metallicity(self):
+            raise NotImplementedError("TBD")
+
+
 def load(file_name, key="sfh"):
     """Load an entire class from storage.
 
